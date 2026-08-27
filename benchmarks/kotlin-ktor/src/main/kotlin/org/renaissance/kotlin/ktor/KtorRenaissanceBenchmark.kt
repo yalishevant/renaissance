@@ -60,10 +60,6 @@ import kotlin.math.min
 )
 @Configuration(name = "jmh")
 class KtorRenaissanceBenchmark() : Benchmark {
-  private var clientCount: Int = 0
-  private var numberOfRepetitions: Int = 0
-  private var fractionOfClientsSendingPrivateMessages: Double = 0.0
-  private var fractionOfClientsSendingGroupMessages: Double = 0.0
   private lateinit var clientPool: ExecutorCoroutineDispatcher
   private lateinit var server: ApplicationEngine
   private lateinit var application: ChatApplication
@@ -72,12 +68,11 @@ class KtorRenaissanceBenchmark() : Benchmark {
   @OptIn(DelicateCoroutinesApi::class)
   override fun setUpBeforeAll(context: BenchmarkContext) {
     val port = context.parameter("port").toPositiveInteger()
-    clientCount = context.parameter("client_count").toPositiveInteger()
-    numberOfRepetitions = context.parameter("iterations_count").toPositiveInteger()
+    val clientCount = context.parameter("client_count").toPositiveInteger()
+    val numberOfRepetitions = context.parameter("iterations_count").toPositiveInteger()
     val numberOfChats = context.parameter("chat_count").toPositiveInteger()
-    fractionOfClientsSendingGroupMessages = context.parameter("group_message_fraction").toDouble()
-    fractionOfClientsSendingPrivateMessages =
-      context.parameter("private_message_fraction").toDouble()
+    val fractionOfClientsSendingGroupMessages = context.parameter("group_message_fraction").toDouble()
+    val fractionOfClientsSendingPrivateMessages = context.parameter("private_message_fraction").toDouble()
     val randomSeed = context.parameter("random_seed").toPositiveInteger()
 
     application = ChatApplication(numberOfChats)
@@ -112,11 +107,9 @@ class KtorRenaissanceBenchmark() : Benchmark {
       clientManager.runClients()
     }
 
-    val expectedGroupClients = (clientCount * fractionOfClientsSendingGroupMessages).toInt()
-    val expectedPrivateClients = (clientCount * fractionOfClientsSendingPrivateMessages).toInt()
     return Validators.simple(
       "Number of successful client tasks",
-      ((expectedGroupClients + expectedPrivateClients) * numberOfRepetitions).toLong(),
+      clientManager.expectedSuccessfulTaskCount.toLong(),
       numberOfSuccessfulTasks.toLong()
     )
   }
