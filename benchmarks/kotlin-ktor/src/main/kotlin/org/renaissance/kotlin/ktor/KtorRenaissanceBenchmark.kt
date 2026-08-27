@@ -101,8 +101,6 @@ class KtorRenaissanceBenchmark() : Benchmark {
       randomSeed,
       CoroutineScope(clientPool)
     )
-
-    super.setUpBeforeAll(context)
   }
 
   override fun setUpBeforeEach(context: BenchmarkContext?) {
