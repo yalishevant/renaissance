@@ -70,7 +70,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
   private lateinit var clientManager: ClientManager
 
   @OptIn(DelicateCoroutinesApi::class)
-  override fun setUpBeforeAll(context: BenchmarkContext?) {
+  override fun setUpBeforeAll(context: BenchmarkContext) {
     val port = context.parameter("port").toPositiveInteger()
     clientCount = context.parameter("client_count").toPositiveInteger()
     numberOfRepetitions = context.parameter("iterations_count").toPositiveInteger()
@@ -102,12 +102,12 @@ class KtorRenaissanceBenchmark() : Benchmark {
     )
   }
 
-  override fun setUpBeforeEach(context: BenchmarkContext?) {
+  override fun setUpBeforeEach(context: BenchmarkContext) {
     application.setup()
     clientManager.setupClients(application.getAvailableChatIds())
   }
 
-  override fun run(context: BenchmarkContext?): BenchmarkResult {
+  override fun run(context: BenchmarkContext): BenchmarkResult {
     val numberOfSuccessfulTasks = runBlocking {
       clientManager.runClients()
     }
@@ -121,7 +121,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
     )
   }
 
-  override fun tearDownAfterAll(context: BenchmarkContext?) {
+  override fun tearDownAfterAll(context: BenchmarkContext) {
     server.stop()
     clientPool.close()
   }
