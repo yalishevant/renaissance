@@ -60,7 +60,6 @@ import kotlin.math.min
 )
 @Configuration(name = "jmh")
 class KtorRenaissanceBenchmark() : Benchmark {
-  private var port: Int = 0
   private var clientCount: Int = 0
   private var numberOfRepetitions: Int = 0
   private var fractionOfClientsSendingPrivateMessages: Double = 0.0
@@ -72,7 +71,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
 
   @OptIn(DelicateCoroutinesApi::class)
   override fun setUpBeforeAll(context: BenchmarkContext?) {
-    port = context!!.parameter("port").toPositiveInteger()
+    val port = context.parameter("port").toPositiveInteger()
     clientCount = context.parameter("client_count").toPositiveInteger()
     numberOfRepetitions = context.parameter("iterations_count").toPositiveInteger()
     val numberOfChats = context.parameter("chat_count").toPositiveInteger()
