@@ -121,8 +121,12 @@ class KtorRenaissanceBenchmark() : Benchmark {
     )
   }
 
+  override fun tearDownAfterEach(context: BenchmarkContext) {
+    clientManager.closeClients()
+  }
+
   override fun tearDownAfterAll(context: BenchmarkContext) {
-    server.stop()
     clientPool.close()
+    server.stop()
   }
 }

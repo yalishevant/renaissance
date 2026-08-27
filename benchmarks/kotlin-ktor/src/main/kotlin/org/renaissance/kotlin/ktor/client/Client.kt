@@ -47,6 +47,10 @@ internal class Client private constructor(
     return successfulTasks
   }
 
+  fun close() {
+    httpClient.close()
+  }
+
   class Builder(
     private val port: Int,
     val userId: String,

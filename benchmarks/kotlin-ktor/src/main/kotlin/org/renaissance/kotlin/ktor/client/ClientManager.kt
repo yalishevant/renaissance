@@ -1,6 +1,5 @@
 package org.renaissance.kotlin.ktor.client
 
-import io.ktor.client.*
 import io.ktor.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -22,17 +21,11 @@ class ClientManager(
 ) {
   private val random = Random(randomSeed)
   private val userIds: Set<String> = (0..<numberOfClients).map { generateNonce() }.toSet()
-  private val predefinedHttpClients: MutableList<HttpClient> = mutableListOf()
-  private val clients: MutableList<Client> = mutableListOf()
+  private var clients: List<Client> = emptyList()
 
   fun setupClients(availableChatIds: List<String>) {
-    clients.clear()
-    predefinedHttpClients.forEach { it.close() }
-    predefinedHttpClients.clear()
-    predefinedHttpClients.addAll(userIds.indices.map { createDefaultClient() })
-
-    val clientBuilders = userIds.zip(predefinedHttpClients).map { (userId, httpClient) ->
-      Client.Builder(port, userId, numberOfRequestsPerClient, httpClient)
+    val clientBuilders = userIds.map { userId ->
+      Client.Builder(port, userId, numberOfRequestsPerClient, createDefaultClient())
     }.toMutableList()
 
     clientBuilders.take((userIds.size * fractionOfClientsSendingGroupMessages).toInt()).forEach { builder ->
@@ -45,7 +38,7 @@ class ClientManager(
     }
     clientBuilders.shuffle(random)
 
-    clients.addAll(clientBuilders.map { it.build() })
+    clients = clientBuilders.map { it.build() }
   }
 
   suspend fun runClients(): Int {
@@ -54,4 +47,10 @@ class ClientManager(
       .awaitAll()
       .sum()
   }
+
+  fun closeClients() {
+    clients.forEach { it.close() }
+    clients = emptyList()
+  }
+
 }
