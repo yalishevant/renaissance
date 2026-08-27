@@ -10,7 +10,6 @@ import org.renaissance.BenchmarkResult.Validators
 import org.renaissance.License
 import org.renaissance.kotlin.ktor.client.ClientManager
 import org.renaissance.kotlin.ktor.server.ChatApplication
-import java.net.Socket
 import kotlin.math.min
 
 @Group("web")
@@ -88,17 +87,9 @@ class KtorRenaissanceBenchmark() : Benchmark {
         main()
       }
     }
-    server.start()
 
-    // Wait for the server to be ready to accept connections.
-    repeat(50) {
-      try {
-        Socket("127.0.0.1", port).close()
-        return@repeat
-      } catch (_: Exception) {
-        Thread.sleep(100)
-      }
-    }
+    // Start the server. When this returns, the server is ready to accept connections.
+    server.start()
 
     clientPool = newFixedThreadPoolContext(min(clientCount, Runtime.getRuntime().availableProcessors()), "clientPool")
     clientManager = ClientManager(
