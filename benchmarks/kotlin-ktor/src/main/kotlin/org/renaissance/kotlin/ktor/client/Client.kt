@@ -55,7 +55,7 @@ internal class Client private constructor(
     private val port: Int,
     val userId: String,
     private val operationsRepetitions: Int,
-    private val httpClient: HttpClient = createDefaultClient()
+    private val httpClient: HttpClient
   ) {
     private val tasksToRun: MutableList<ClientTask> = mutableListOf()
 
@@ -70,7 +70,7 @@ internal class Client private constructor(
   }
 }
 
-fun createDefaultClient(): HttpClient = HttpClient(CIO) {
+internal fun createHttpClient(): HttpClient = HttpClient(CIO) {
   engine {
 
   }

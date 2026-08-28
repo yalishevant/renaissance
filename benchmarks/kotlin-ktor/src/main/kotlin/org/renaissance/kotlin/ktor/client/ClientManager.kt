@@ -63,7 +63,7 @@ class ClientManager(
     setupRandom = SplittableRandom(setupSeed)
 
     val clientBuilders = userIds.map { userId ->
-      Client.Builder(port, userId, numberOfRequestsPerClient, createDefaultClient())
+      Client.Builder(port, userId, numberOfRequestsPerClient, createHttpClient())
     }
 
     val groupTaskCount = (userIds.size * fractionOfClientsSendingGroupMessages).toInt()
