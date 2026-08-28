@@ -6,6 +6,7 @@ import io.ktor.websocket.*
 import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.command.RenameUserCommand
 import org.renaissance.kotlin.ktor.common.sendSerialisedCommandNative
+import org.renaissance.kotlin.ktor.common.getRandomString
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 

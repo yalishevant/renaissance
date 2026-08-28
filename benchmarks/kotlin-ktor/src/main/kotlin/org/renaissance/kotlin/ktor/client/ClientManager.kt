@@ -1,10 +1,10 @@
 package org.renaissance.kotlin.ktor.client
 
-import io.ktor.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import org.renaissance.kotlin.ktor.common.getRandomDigits
 import kotlin.random.Random
 
 /**
@@ -51,7 +51,10 @@ class ClientManager(
     private set
 
   private fun Random.generateUserIds(count: Int): Set<String> =
-    generateSequence { generateNonce() }.distinct().take(count).toSet()
+    generateSequence { nextUserId() }.distinct().take(count).toSet()
+
+  // Length varies so that id strings don't over-specialize length-dependent code paths.
+  private fun Random.nextUserId(): String = getRandomDigits(base = 10, length = nextInt(7, 16))
 
   fun setupClients(availableChatIds: List<String>) {
     val clientBuilders = userIds.map { userId ->
