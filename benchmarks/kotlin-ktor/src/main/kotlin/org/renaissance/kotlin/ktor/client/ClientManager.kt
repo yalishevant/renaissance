@@ -20,7 +20,12 @@ class ClientManager(
   private val coroutineScope: CoroutineScope
 ) {
   private val random = Random(randomSeed)
-  private val userIds: Set<String> = (0..<numberOfClients).map { generateNonce() }.toSet()
+
+  // ArrayList is desired for List.random().
+  private val userIds: ArrayList<String> = ArrayList(
+    random.generateUserIds(numberOfClients)
+  )
+
   private var clients: List<Client> = emptyList()
 
   /**
@@ -30,6 +35,9 @@ class ClientManager(
    */
   var expectedSuccessfulTaskCount: Int = 0
     private set
+
+  private fun Random.generateUserIds(count: Int): Set<String> =
+    generateSequence { generateNonce() }.distinct().take(count).toSet()
 
   fun setupClients(availableChatIds: List<String>) {
     val clientBuilders = userIds.map { userId ->
@@ -42,9 +50,11 @@ class ClientManager(
     }
     clientBuilders.shuffle(random)
 
+    // Picking the self as the recipient is allowed. The server handles
+    // messaging self and this remains correct even in a single-user case.
     val privateTaskCount = (userIds.size * fractionOfClientsSendingPrivateMessages).toInt()
     clientBuilders.take(privateTaskCount).forEach { builder ->
-      builder.addTaskToRun(DirectMessageClientTask(userIds.shuffled(random).first { it != builder.userId }, random))
+      builder.addTaskToRun(DirectMessageClientTask(userIds.random(random), random))
     }
     clientBuilders.shuffle(random)
 
