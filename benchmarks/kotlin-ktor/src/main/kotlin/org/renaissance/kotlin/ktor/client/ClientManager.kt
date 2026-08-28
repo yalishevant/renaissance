@@ -8,7 +8,21 @@ import kotlinx.coroutines.awaitAll
 import kotlin.random.Random
 
 /**
- * A **probabilistic** client manager, which sets up the appropriate number of clients, performing a specified number and kind of tasks
+ * Sets up and runs a fixed pool of simulated chat clients.
+ *
+ * Each call to [setupClients] draws two independent random subsets the client
+ * pool - one to receive a group-message task, one to receive a direct-message
+ * task - each of size `fraction * numberOfClients`.
+ *
+ * Both subsets are drawn *without replacement*, meaning that a fraction of
+ * `1.0` always selects every client exactly once. The two subsets are drawn
+ * independently of each other, so a client can end up with both tasks, one,
+ * or none.
+ *
+ * A direct message's recipient is drawn *with replacement* from the same
+ * client pool, including the sender itself: messaging self is treated as an
+ * ordinary direct-message chat, which keeps it well-defined even for a
+ * single-client pool.
  */
 class ClientManager(
   private val port: Int,
@@ -42,25 +56,28 @@ class ClientManager(
   fun setupClients(availableChatIds: List<String>) {
     val clientBuilders = userIds.map { userId ->
       Client.Builder(port, userId, numberOfRequestsPerClient, createDefaultClient())
-    }.toMutableList()
+    }
 
     val groupTaskCount = (userIds.size * fractionOfClientsSendingGroupMessages).toInt()
-    clientBuilders.take(groupTaskCount).forEach { builder ->
-      builder.addTaskToRun(JoinGroupAndSendMessageClientTask(availableChatIds.random(random), random))
+    assignRandomTasks(clientBuilders, groupTaskCount) {
+      JoinGroupAndSendMessageClientTask(availableChatIds.random(random), random)
     }
-    clientBuilders.shuffle(random)
 
     // Picking the self as the recipient is allowed. The server handles
     // messaging self and this remains correct even in a single-user case.
     val privateTaskCount = (userIds.size * fractionOfClientsSendingPrivateMessages).toInt()
-    clientBuilders.take(privateTaskCount).forEach { builder ->
-      builder.addTaskToRun(DirectMessageClientTask(userIds.random(random), random))
+    assignRandomTasks(clientBuilders, privateTaskCount) {
+      DirectMessageClientTask(userIds.random(random), random)
     }
-    clientBuilders.shuffle(random)
 
     expectedSuccessfulTaskCount = (groupTaskCount + privateTaskCount) * numberOfRequestsPerClient
 
     clients = clientBuilders.map { it.build() }
+  }
+
+  private fun assignRandomTasks(builders: List<Client.Builder>, count: Int, createTask: () -> ClientTask) {
+    // Draw builders without replacement to assign each at most one task.
+    builders.shuffled(random).take(count).forEach { it.addTaskToRun(createTask()) }
   }
 
   suspend fun runClients(): Int {
