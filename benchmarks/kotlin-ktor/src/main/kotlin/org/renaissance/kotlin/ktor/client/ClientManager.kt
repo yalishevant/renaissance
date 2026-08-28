@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import org.renaissance.kotlin.ktor.common.SplittableRandom
 import org.renaissance.kotlin.ktor.common.getRandomDigits
 import kotlin.random.Random
 
@@ -30,16 +31,18 @@ class ClientManager(
   private val numberOfRequestsPerClient: Int,
   private val fractionOfClientsSendingGroupMessages: Double,
   private val fractionOfClientsSendingPrivateMessages: Double,
-  randomSeed: Int,
-  private val coroutineScope: CoroutineScope
+  private val coroutineScope: CoroutineScope,
+  initialSeed: Long
 ) {
-  private val random = Random(randomSeed)
+  private val initialRandom = Random(initialSeed)
+  private val setupSeed = initialRandom.nextLong()
 
   // ArrayList is desired for List.random().
   private val userIds: ArrayList<String> = ArrayList(
-    random.generateUserIds(numberOfClients)
+    initialRandom.generateUserIds(numberOfClients)
   )
 
+  private lateinit var setupRandom: SplittableRandom
   private var clients: List<Client> = emptyList()
 
   /**
@@ -56,21 +59,23 @@ class ClientManager(
   // Length varies so that id strings don't over-specialize length-dependent code paths.
   private fun Random.nextUserId(): String = getRandomDigits(base = 10, length = nextInt(7, 16))
 
-  fun setupClients(availableChatIds: List<String>) {
+  fun <L> setupClients(availableChatIds: L) where L: Collection<String>, L: RandomAccess {
+    setupRandom = SplittableRandom(setupSeed)
+
     val clientBuilders = userIds.map { userId ->
       Client.Builder(port, userId, numberOfRequestsPerClient, createDefaultClient())
     }
 
     val groupTaskCount = (userIds.size * fractionOfClientsSendingGroupMessages).toInt()
-    assignRandomTasks(clientBuilders, groupTaskCount) {
-      JoinGroupAndSendMessageClientTask(availableChatIds.random(random), random)
+    assignRandomTasks(clientBuilders, groupTaskCount, availableChatIds) { chatId, taskRandom ->
+      JoinGroupAndSendMessageClientTask(chatId, taskRandom)
     }
 
     // Picking the self as the recipient is allowed. The server handles
     // messaging self and this remains correct even in a single-user case.
     val privateTaskCount = (userIds.size * fractionOfClientsSendingPrivateMessages).toInt()
-    assignRandomTasks(clientBuilders, privateTaskCount) {
-      DirectMessageClientTask(userIds.random(random), random)
+    assignRandomTasks(clientBuilders, privateTaskCount, userIds) { userId, taskRandom ->
+      DirectMessageClientTask(userId, taskRandom)
     }
 
     expectedSuccessfulTaskCount = (groupTaskCount + privateTaskCount) * numberOfRequestsPerClient
@@ -78,9 +83,16 @@ class ClientManager(
     clients = clientBuilders.map { it.build() }
   }
 
-  private fun assignRandomTasks(builders: List<Client.Builder>, count: Int, createTask: () -> ClientTask) {
+  private fun <L> assignRandomTasks(
+    builders: List<Client.Builder>, count: Int, targets: L,
+    createTask: (String, Random) -> ClientTask
+  ) where L: Collection<String>, L: RandomAccess {
     // Draw builders without replacement to assign each at most one task.
-    builders.shuffled(random).take(count).forEach { it.addTaskToRun(createTask()) }
+    // For each task, draw a target with replacement and split off a new
+    // Random so that tasks do not share a single thread-unsafe Random.
+    builders.shuffled(setupRandom).take(count).forEach { builder ->
+      builder.addTaskToRun(createTask(targets.random(setupRandom), setupRandom.split()))
+    }
   }
 
   suspend fun runClients(): Int {

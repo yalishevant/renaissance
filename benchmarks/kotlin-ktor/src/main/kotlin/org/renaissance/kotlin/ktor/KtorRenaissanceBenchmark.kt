@@ -11,6 +11,7 @@ import org.renaissance.License
 import org.renaissance.kotlin.ktor.client.ClientManager
 import org.renaissance.kotlin.ktor.server.ChatApplication
 import kotlin.math.min
+import kotlin.random.Random
 
 @Group("web")
 @Name("kotlin-ktor")
@@ -73,7 +74,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
     val numberOfChats = context.parameter("chat_count").toPositiveInteger()
     val fractionOfClientsSendingGroupMessages = context.parameter("group_message_fraction").toDouble()
     val fractionOfClientsSendingPrivateMessages = context.parameter("private_message_fraction").toDouble()
-    val randomSeed = context.parameter("random_seed").toPositiveInteger()
+    val baseRandom = Random(context.parameter("random_seed").toPositiveInteger().toLong())
 
     application = ChatApplication(numberOfChats)
     server = embeddedServer(io.ktor.server.cio.CIO, host = "127.0.0.1", port = port) {
@@ -92,8 +93,8 @@ class KtorRenaissanceBenchmark() : Benchmark {
       numberOfRepetitions,
       fractionOfClientsSendingGroupMessages,
       fractionOfClientsSendingPrivateMessages,
-      randomSeed,
-      CoroutineScope(clientPool)
+      CoroutineScope(clientPool),
+      baseRandom.nextLong()
     )
   }
 

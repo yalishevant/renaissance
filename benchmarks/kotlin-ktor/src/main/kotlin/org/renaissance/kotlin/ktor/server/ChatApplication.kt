@@ -26,8 +26,8 @@ class ChatApplication(numberOfChatsToSetup: Int) {
    */
   private val server = ChatServer(numberOfChatsToSetup)
 
-  fun getAvailableChatIds(): List<String> {
-    return server.chats.keys().toList()
+  fun getAvailableChatIds(): ArrayList<String> {
+    return ArrayList(server.chats.keys)
   }
 
   fun setup() {
