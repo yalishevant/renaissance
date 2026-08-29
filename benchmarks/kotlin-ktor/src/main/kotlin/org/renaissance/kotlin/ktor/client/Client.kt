@@ -42,8 +42,9 @@ internal class Client private constructor(
 
       for (i in 0..<operationsRepetitions) {
         tasksToRun.forEach {
-          it.run(this)
-          successfulTasks++
+          if (it.run(this)) {
+            successfulTasks++
+          }
         }
       }
     }

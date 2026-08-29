@@ -11,8 +11,8 @@ import kotlin.random.Random
 class DirectMessageClientTask(private val userId: String, random: Random) : SendMessageAndAwaitClientTask(random) {
   private lateinit var privateChatId: String
 
-  override suspend fun run(session: DefaultClientWebSocketSession) {
-    session.sendSerialisedCommandNative(CreateDirectMessageChatCommand(userId))
+  override suspend fun run(session: DefaultClientWebSocketSession): Boolean {
+    session.sendSerialisedCommandNative(CreateDirectMessageChatCommand(recipientUserId))
     session.waitForMessage {
       val reply = kotlin.runCatching { session.converter!!.deserialize<CommandReply>(it) }.getOrNull()
       if (reply is CreateDirectMessageChatCommandReply) {
@@ -23,6 +23,6 @@ class DirectMessageClientTask(private val userId: String, random: Random) : Send
       }
     }
 
-    session.sendMessageToChatAndAwait(privateChatId)
+    return session.sendMessageToChatAndAwait(privateChatId)
   }
 }

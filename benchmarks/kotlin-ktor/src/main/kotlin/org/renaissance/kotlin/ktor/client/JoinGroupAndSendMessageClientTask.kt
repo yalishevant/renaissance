@@ -7,8 +7,8 @@ import kotlin.random.Random
 
 
 class JoinGroupAndSendMessageClientTask(private val chatId: String, random: Random): SendMessageAndAwaitClientTask(random) {
-  override suspend fun run(session: DefaultClientWebSocketSession) {
+  override suspend fun run(session: DefaultClientWebSocketSession): Boolean {
     session.sendSerialisedCommandNative(JoinChatCommand(chatId))
-    session.sendMessageToChatAndAwait(chatId)
+    return session.sendMessageToChatAndAwait(chatId)
   }
 }

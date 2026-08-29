@@ -16,12 +16,12 @@ abstract class SendMessageAndAwaitClientTask(
 ) : ClientTask {
   private val messageId = AtomicInteger(0)
 
-  protected suspend fun DefaultClientWebSocketSession.sendMessageToChatAndAwait(chatId: String) {
+  protected suspend fun DefaultClientWebSocketSession.sendMessageToChatAndAwait(chatId: String): Boolean {
     val expectedMsg = "${messageId.getAndIncrement()}_${random.getRandomString(random.nextInt(1, MAX_MESSAGE_LENGTH))}"
     sendSerialisedCommandNative(RenameUserCommand("client$clientId"))
     sendSerialized(Message(chatId, expectedMsg))
     val expectedMessage = "[client$clientId] $expectedMsg"
-    waitForMessage {
+    return waitForMessage {
       val receivedText =  (it as? Frame.Text)?.readText() ?: return@waitForMessage false
       receivedText == expectedMessage
     }
