@@ -27,7 +27,13 @@ internal class Client private constructor(
   /**
    * Runs the client by establishing a WebSocket connection and performing the specified tasks.
    *
-   * @return The number of successful tasks. Should be equal to `operationsRepetitions * tasksToRun.length`
+   * This is a localhost-only scenario, so every task is expected to execute
+   * without throwing an exception. A task may return `false` if the response
+   * from the server is not what the task expected. Task throwing an exception
+   * means something is totally broken.
+   *
+   * @return The number of tasks that completed with success.
+   * @throws Exception if any task fails.
    */
   suspend fun run(): Int {
     var successfulTasks = 0
@@ -36,11 +42,8 @@ internal class Client private constructor(
 
       for (i in 0..<operationsRepetitions) {
         tasksToRun.forEach {
-          try {
-            it.run(this)
-            successfulTasks++
-          } catch (_: Throwable) {
-          }
+          it.run(this)
+          successfulTasks++
         }
       }
     }
