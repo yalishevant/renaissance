@@ -6,7 +6,7 @@ import org.renaissance.kotlin.ktor.common.User
 import org.renaissance.kotlin.ktor.common.command.CommandReply
 import org.renaissance.kotlin.ktor.common.command.CreateDirectMessageChatCommand
 import org.renaissance.kotlin.ktor.common.command.CreateDirectMessageChatCommandReply
-import org.renaissance.kotlin.ktor.common.sendSerialisedCommandNative
+import org.renaissance.kotlin.ktor.common.sendSerializedCommandNative
 import kotlin.random.Random
 
 class DirectMessageClientTask(
@@ -16,7 +16,7 @@ class DirectMessageClientTask(
   private lateinit var privateChatId: String
 
   override suspend fun run(session: DefaultClientWebSocketSession, user: User): Boolean {
-    session.sendSerialisedCommandNative(CreateDirectMessageChatCommand(recipientUserId))
+    session.sendSerializedCommandNative(CreateDirectMessageChatCommand(recipientUserId))
     session.waitForMessage {
       val reply = kotlin.runCatching { session.converter!!.deserialize<CommandReply>(it) }.getOrNull()
       if (reply is CreateDirectMessageChatCommandReply) {

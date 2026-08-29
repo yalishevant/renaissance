@@ -11,7 +11,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.command.*
-import org.renaissance.kotlin.ktor.common.sendSerialisedCommandReplyNative
+import org.renaissance.kotlin.ktor.common.sendSerializedCommandReplyNative
 import org.renaissance.kotlin.ktor.common.serializationFormat
 import org.slf4j.event.Level
 
@@ -119,7 +119,7 @@ class ChatApplication(numberOfChatsToSetup: Int) {
 
       is CreateChatCommand -> {
         val createdChatId = server.createChat(userId)
-        sendSerialisedCommandReplyNative(CreateChatCommandReply(createdChatId))
+        sendSerializedCommandReplyNative(CreateChatCommandReply(createdChatId))
       }
 
       is CreateDirectMessageChatCommand -> {
@@ -127,7 +127,7 @@ class ChatApplication(numberOfChatsToSetup: Int) {
           userId,
           deserializedCommand.inviteeUserId,
         )
-        sendSerialisedCommandReplyNative(CreateDirectMessageChatCommandReply(createdChat))
+        sendSerializedCommandReplyNative(CreateDirectMessageChatCommandReply(createdChat))
       }
 
       // Handle a normal message.
