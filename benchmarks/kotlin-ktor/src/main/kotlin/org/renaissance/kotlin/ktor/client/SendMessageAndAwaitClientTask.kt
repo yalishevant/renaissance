@@ -5,16 +5,15 @@ import io.ktor.websocket.*
 import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.User
 import org.renaissance.kotlin.ktor.common.getRandomString
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
 abstract class SendMessageAndAwaitClientTask(
   private val random: Random
 ) : ClientTask {
-  private val messageId = AtomicInteger(0)
+  private var messageId = 0
 
   protected suspend fun DefaultClientWebSocketSession.sendMessageToChatAndAwait(chatId: String, user: User): Boolean {
-    val chatMessage = "${messageId.getAndIncrement()}_${random.getRandomString(random.nextInt(1, MAX_MESSAGE_LENGTH))}"
+    val chatMessage = "${messageId++}_${random.getRandomString(random.nextInt(1, MAX_MESSAGE_LENGTH))}"
     sendSerialized(Message(chatId, chatMessage))
 
     val expectedResponse = "[${user.userName}] $chatMessage"
