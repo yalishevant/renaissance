@@ -32,7 +32,6 @@ class ChatServer(private val numberOfChatsToSetup: Int) {
    * A concurrent map associating session IDs to usernames.
    */
   private val users = ConcurrentHashMap<String, User>()
-  private val directChatIdToCommonChatId = ConcurrentHashMap<String, String>()
   val chats = ConcurrentHashMap<String, Chat>()
 
   /**
@@ -44,7 +43,6 @@ class ChatServer(private val numberOfChatsToSetup: Int) {
 
   fun setupChats() {
     chats.clear()
-    directChatIdToCommonChatId.clear()
     for (i in 0..<numberOfChatsToSetup) {
       val id = generateNonce()
       chats[id] = Chat(id)
