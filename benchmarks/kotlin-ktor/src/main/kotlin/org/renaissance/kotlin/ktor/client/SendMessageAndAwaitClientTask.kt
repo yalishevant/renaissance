@@ -24,4 +24,9 @@ abstract class SendMessageAndAwaitClientTask(
   }
 }
 
+/**
+ * Arbitrary value, not based on any data. Adds a little real string
+ * work per message, without dominating the workload intended to exercise
+ * Kotlin coroutines and the Ktor framework.
+ */
 const val MAX_MESSAGE_LENGTH = 356
