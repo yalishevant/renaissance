@@ -2,11 +2,15 @@ package org.renaissance.kotlin.ktor.server
 
 import io.ktor.util.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import org.renaissance.kotlin.ktor.common.Chat
 import org.renaissance.kotlin.ktor.common.DirectMessageChat
 import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.User
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -136,7 +140,7 @@ class ChatServer(private val numberOfChatsToSetup: Int) {
    * Both [recipientUserId] and [senderUserId] are identified by its session-id.
    */
   suspend fun sendTo(recipientUserId: String, senderUserId: String, message: String) {
-    userSockets[recipientUserId]?.send(Frame.Text("[$senderUserId] $message"))
+    userSockets[recipientUserId]?.sendToEach(Frame.Text("[$senderUserId] $message"))
   }
 
   /**
@@ -166,24 +170,31 @@ class ChatServer(private val numberOfChatsToSetup: Int) {
    * Sends a [message] to all the members in the server, including all the connections per member.
    */
   private suspend fun Chat.broadcast(message: String) {
-    users.asSequence().map { userSockets[it.userId] }.filterNotNull().forEach { socket ->
-      socket.send(Frame.Text(message))
+    users.asSequence().mapNotNull { userSockets[it.userId] }.forEach { sockets ->
+      sockets.sendToEach(Frame.Text(message))
     }
   }
 
   /**
-   * Sends a [sendMessage] to a list of [this] [WebSocketSession].
+   * Sends a [frame] to every socket in [this] list. Skips over sockets that are
+   * already closed ([ClosedSendChannelException]) or broken ([IOException]), but
+   * does not close them (it did not open them). Anything else (a bug, or our own
+   * cancellation) is left to propagate. Cancellations need to be handled with care,
+   * because we may get a [CancellationException] when a different coroutine cancels
+   * the [WebSocketSession] (dropping buffered outgoing messages). That is also
+   * skipped, but only if it did not come from our own coroutine being cancelled.
    */
-  private suspend fun List<WebSocketSession>.send(frame: Frame) {
-    forEach {
+  private suspend fun List<WebSocketSession>.sendToEach(frame: Frame) {
+    forEach { session ->
       try {
-        it.send(frame.copy())
-      } catch (t: Throwable) {
-        try {
-          it.close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, ""))
-        } catch (ignore: ClosedSendChannelException) {
-          // at some point it will get closed
-        }
+        session.send(frame.copy())
+      } catch (_: ClosedSendChannelException) {
+        // already gone; nothing to do here
+      } catch (_: IOException) {
+        // transport broken; nothing to do here
+      } catch (t: CancellationException) {
+        if (!currentCoroutineContext().isActive) throw t
+        // not our cancellation; nothing to do here
       }
     }
   }
