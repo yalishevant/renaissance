@@ -1,6 +1,6 @@
 package org.renaissance.kotlin.ktor.server
 
-import io.ktor.util.*
+import io.ktor.util.generateNonce
 import io.ktor.websocket.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
@@ -10,10 +10,12 @@ import org.renaissance.kotlin.ktor.common.Chat
 import org.renaissance.kotlin.ktor.common.DirectMessageChat
 import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.User
+import org.renaissance.kotlin.ktor.common.getRandomDigits
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 const val MAX_MESSAGE_HISTORY_LENGTH = 100
 const val MAX_USERNAME_LENGTH = 50
@@ -21,33 +23,59 @@ const val MAX_USERNAME_LENGTH = 50
 /**
  * This class is in charge of the chat server logic.
  * It contains handlers for events and commands to send messages to specific users on the server.
+ * The [chats], [users] and [userSockets] maps are replaced on each benchmark repetition
+ * to release the backing table (clearing maps or removing entries does not shrink them).
  */
-class ChatServer(private val numberOfChatsToSetup: Int) {
+class ChatServer(initialChatCount: Int, initialSeed: Long) {
+
+  /**
+   * Set of initial chat IDs the server starts with. Does not change between repetitions.
+   */
+  private val initialChatIds = Random(initialSeed).generateChatIds(initialChatCount)
+
   /**
    * The atomic counter used to get unique usernames based on the maximum users the server had.
    */
   private val usersCounter = AtomicInteger()
 
   /**
-   * A concurrent map associating session IDs to usernames.
+   * A concurrent map associating session IDs with [User] instances.
    */
-  private val users = ConcurrentHashMap<String, User>()
-  val chats = ConcurrentHashMap<String, Chat>()
+  private lateinit var users: ConcurrentHashMap<String, User>
 
   /**
-   * Associates a session ID to a set of websockets.
-   * Since a browser is able to open several tabs and windows with the same cookies and thus the same session.
-   * There might be several opened sockets for the same client.
+   * A concurrent map associating chat IDs with [Chat] instances.
    */
-  private val userSockets = ConcurrentHashMap<String, MutableList<WebSocketSession>>()
+  internal lateinit var chats: ConcurrentHashMap<String, Chat> private set
 
-  fun setupChats() {
-    chats.clear()
-    for (i in 0..<numberOfChatsToSetup) {
-      val id = generateNonce()
-      chats[id] = Chat(id)
-    }
+
+  /**
+   * Associates a session ID to a collection of websockets.
+   * A user can open multiple tabs or windows with same cookies and thus the
+   * same session, so there may be several opened sockets for the same client.
+   */
+  private lateinit var userSockets: ConcurrentHashMap<String, MutableList<WebSocketSession>>
+
+  fun setup() {
+    usersCounter.set(0)
+    users = ConcurrentHashMap()
+    userSockets = ConcurrentHashMap()
+    chats = createChats(initialChatIds)
   }
+
+  fun teardown() {
+    chats = ConcurrentHashMap(0)
+    users = ConcurrentHashMap(0)
+    userSockets = ConcurrentHashMap(0)
+  }
+
+  private fun createChats(ids: Set<String>): ConcurrentHashMap<String, Chat> =
+    ids.associateWithTo(ConcurrentHashMap(ids.size)) { id -> Chat(id) }
+
+  private fun Random.generateChatIds(count: Int): Set<String> =
+    generateSequence { nextChatId() }.distinct().take(count).toSet()
+
+  private fun Random.nextChatId(): String = getRandomDigits(base = 16, length = 16)
 
   /**
    * Handles that a member is identified by a session ID and a socket joined.

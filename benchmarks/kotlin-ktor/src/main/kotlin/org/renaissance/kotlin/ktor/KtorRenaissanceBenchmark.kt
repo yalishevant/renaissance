@@ -117,7 +117,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
     val parameters = Parameters.fromContext(context)
     val baseRandom = Random(parameters.randomSeed)
 
-    application = ChatApplication(parameters.chatCount)
+    application = ChatApplication(parameters.chatCount, baseRandom.nextLong())
     server = startServer(application, parameters.port)
 
     clientPool = createClientPool(parameters.clientCount)
@@ -143,6 +143,7 @@ class KtorRenaissanceBenchmark() : Benchmark {
 
   override fun tearDownAfterEach(context: BenchmarkContext) {
     clientManager.closeClients()
+    application.teardown()
   }
 
   override fun tearDownAfterAll(context: BenchmarkContext) {

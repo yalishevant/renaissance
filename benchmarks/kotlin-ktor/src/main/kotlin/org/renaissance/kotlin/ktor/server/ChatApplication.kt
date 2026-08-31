@@ -14,22 +14,23 @@ import org.renaissance.kotlin.ktor.common.Message
 import org.renaissance.kotlin.ktor.common.command.*
 import org.renaissance.kotlin.ktor.common.sendSerializedCommandReplyNative
 import org.renaissance.kotlin.ktor.common.serializationFormat
+import kotlin.random.Random
 
 /**
  * This object and the server it configures are created once for the whole
- * benchmark run. The [setup] method resets chat state and is called once
- * per repetition.
+ * benchmark run. The [setup] and [teardown] methods are called once per
+ * repetition to provide reproducible initial state.
  */
-class ChatApplication(initialChatCount: Int) {
-  private val server = ChatServer(initialChatCount)
+class ChatApplication(initialChatCount: Int, initialSeed: Long) {
+  private val server = ChatServer(initialChatCount, initialSeed)
 
   fun getAvailableChatIds(): ArrayList<String> {
     return ArrayList(server.chats.keys)
   }
 
-  fun setup() {
-    server.setupChats()
-  }
+  fun setup() = server.setup()
+
+  fun teardown() = server.teardown()
 
   /**
    * Configures Ktor's [Application]: installs default headers, call logging,
