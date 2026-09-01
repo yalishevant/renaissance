@@ -5,6 +5,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.*
+import org.renaissance.kotlin.ktor.common.User
 import org.renaissance.kotlin.ktor.common.serializationFormat
 
 
@@ -20,12 +21,17 @@ import org.renaissance.kotlin.ktor.common.serializationFormat
 internal class Client private constructor(
   private val httpClient: HttpClient,
   private val port: Int,
-  private val userId: String,
+  private val user: User,
   private val operationsRepetitions: Int,
+  private val prologueTasks: List<ClientTask>,
   private val tasksToRun: List<ClientTask>,
 ) {
   /**
    * Runs the client by establishing a WebSocket connection and performing the specified tasks.
+   *
+   * The [prologueTasks] are intended for actions related to the client's
+   * session (e.g., establishing a display name) and are run exactly once
+   * before running the [tasksToRun] repeatedly.
    *
    * This is a localhost-only scenario, so every task is expected to execute
    * without throwing an exception. A task may return `false` if the response
@@ -37,12 +43,13 @@ internal class Client private constructor(
    */
   suspend fun run(): Int {
     var successfulTasks = 0
-    httpClient.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = port, path = "/ws/${userId}") {
-      tasksToRun.forEach { it.setup(this) }
+    httpClient.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = port, path = "/ws/${user.userId}") {
+      prologueTasks.forEach { it.run(this, user) }
+      tasksToRun.forEach { it.setup(this, user) }
 
       for (i in 0..<operationsRepetitions) {
         tasksToRun.forEach {
-          if (it.run(this)) {
+          if (it.run(this, user)) {
             successfulTasks++
           }
         }
@@ -57,11 +64,18 @@ internal class Client private constructor(
 
   class Builder(
     private val port: Int,
-    val userId: String,
+    userId: String,
     private val operationsRepetitions: Int,
     private val httpClient: HttpClient
   ) {
+    private val user = User(userId)
+    private val prologueTasks: MutableList<ClientTask> = mutableListOf()
     private val tasksToRun: MutableList<ClientTask> = mutableListOf()
+
+    fun addPrologueTask(task: ClientTask): Builder {
+      prologueTasks.add(task)
+      return this
+    }
 
     fun addTaskToRun(task: ClientTask): Builder {
       tasksToRun.add(task)
@@ -69,7 +83,7 @@ internal class Client private constructor(
     }
 
     fun build(): Client {
-      return Client(httpClient, port, userId, operationsRepetitions, tasksToRun)
+      return Client(httpClient, port, user, operationsRepetitions, prologueTasks, tasksToRun)
     }
   }
 }

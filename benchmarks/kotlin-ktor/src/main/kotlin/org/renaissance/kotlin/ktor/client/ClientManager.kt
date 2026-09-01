@@ -64,6 +64,7 @@ class ClientManager(
 
     val clientBuilders = userIds.map { userId ->
       Client.Builder(port, userId, numberOfRequestsPerClient, createHttpClient())
+        .addPrologueTask(RenameClientTask())
     }
 
     val groupTaskCount = (userIds.size * fractionOfClientsSendingGroupMessages).toInt()
@@ -74,8 +75,8 @@ class ClientManager(
     // Picking the self as the recipient is allowed. The server handles
     // messaging self and this remains correct even in a single-user case.
     val privateTaskCount = (userIds.size * fractionOfClientsSendingPrivateMessages).toInt()
-    assignRandomTasks(clientBuilders, privateTaskCount, userIds) { userId, taskRandom ->
-      DirectMessageClientTask(userId, taskRandom)
+    assignRandomTasks(clientBuilders, privateTaskCount, userIds) { recipientUserId, taskRandom ->
+      DirectMessageClientTask(recipientUserId, taskRandom)
     }
 
     expectedSuccessfulTaskCount = (groupTaskCount + privateTaskCount) * numberOfRequestsPerClient
