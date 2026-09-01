@@ -16,7 +16,7 @@ abstract class SendMessageAndAwaitClientTask(
     val chatMessage = "${messageId++}_${random.getRandomString(random.nextInt(1, MAX_MESSAGE_LENGTH))}"
     sendSerialized(Message(chatId, chatMessage))
 
-    val expectedResponse = "[${user.userName}] $chatMessage"
+    val expectedResponse = "[${user.name}] $chatMessage"
     return waitForMessage {
       val receivedText = (it as? Frame.Text)?.readText() ?: return@waitForMessage false
       receivedText == expectedResponse

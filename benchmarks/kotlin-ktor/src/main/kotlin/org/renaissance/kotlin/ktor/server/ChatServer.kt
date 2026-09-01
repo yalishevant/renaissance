@@ -84,7 +84,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
     // Checks if this user is already registered in the server and gives him/her a temporary name if required.
     users.computeIfAbsent(userId) {
       val user = User(userId)
-      user.userName = "user${usersCounter.incrementAndGet()}"
+      user.name = "user${usersCounter.incrementAndGet()}"
       user
     }
 
@@ -100,7 +100,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
     val user = users[userId]!!
     // Only when joining the first socket for a member notifies the rest of the users.
     if (chat.users.add(user) && userSockets[userId]?.size == 1) {
-      chats[chatId]?.broadcast("Member joined: ${user.userName}")
+      chats[chatId]?.broadcast("Member joined: ${user.name}")
       userSockets[userId]?.forEach {
         it.send("You've joined chat $chatId")
         it.send("Last messages:")
@@ -112,27 +112,26 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
   }
 
   /**
-   * Handles a [userId] identified by its session ID renaming [newName] a specific name.
+   * Handles a [userId] requesting change of the display name to [newName].
+   * Responses are sent to all socket sessions.
    */
   suspend fun renameUser(userId: String, newName: String) {
     if (newName.isBlank())
-      return sendTo(userId, "server::help", "/user [newName]")
+      return sendTo(userId, "server::rename::help", "/user [newName]")
 
     if (newName.length > MAX_USERNAME_LENGTH)
-      return sendTo(userId, "server::help", "new name is too long: 50 characters limit")
+      return sendTo(userId, "server::rename::error", "new name is too long: 50 characters limit")
 
     // Re-sets the member name.
     val user = users[userId] ?: return
-    val oldName = user.userName
+    val oldName = user.name
     synchronized(user) {
-      // if userName was updated before we got the lock
-      if (user.userName != oldName) return
-      user.userName = newName
+      // if name was updated before we got the lock
+      if (user.name != oldName) return
+      user.name = newName
     }
-    // Notifies everyone in the server about this change.
-    userSockets[userId]?.forEach {
-      it.send("You've been successfully renamed from $oldName to $newName")
-    }
+
+    sendTo(userId, "server::rename", "You have been renamed from $oldName to $newName")
   }
 
   /**
@@ -153,7 +152,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
       user.let { userInChat ->
         chats.values.forEach { chat ->
           if (chat.users.remove(userInChat)) {
-            chat.broadcast("Member left: ${userInChat.userName}")
+            chat.broadcast("Member left: ${userInChat.name}")
           }
         }
       }
@@ -174,7 +173,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
    */
   suspend fun sendMessage(userId: String, message: Message) {
     // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
-    val userName = users[userId]?.userName ?: userId
+    val userName = users[userId]?.name ?: userId
     val formatted = "[$userName] ${message.content}"
 
     // Sends this pre-formatted message to all the members in the server.
@@ -196,7 +195,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
    * Sends a [message] to all the members in the server, including all the connections per member.
    */
   private suspend fun Chat.broadcast(message: String) {
-    users.asSequence().mapNotNull { userSockets[it.userId] }.forEach { sockets ->
+    users.asSequence().mapNotNull { user -> userSockets[user.id] }.forEach { sockets ->
       sockets.sendToEach(Frame.Text(message))
     }
   }
@@ -243,7 +242,7 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
         users.add(this@ChatServer.users[creatorUserId]!!)
         users.add(this@ChatServer.users.computeIfAbsent(inviteeUserId) {
           User(inviteeUserId).apply {
-            userName = "user${usersCounter.incrementAndGet()}"
+            name = "user${usersCounter.incrementAndGet()}"
           }
         })
       }

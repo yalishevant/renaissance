@@ -10,7 +10,7 @@ import org.renaissance.kotlin.ktor.common.sendSerializedCommandNative
  */
 class RenameClientTask : ClientTask {
   override suspend fun run(session: DefaultClientWebSocketSession, user: User): Boolean {
-    session.sendSerializedCommandNative(RenameUserCommand(user.userName))
+    session.sendSerializedCommandNative(RenameUserCommand(user.name))
     return true
   }
 }

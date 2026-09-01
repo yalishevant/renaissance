@@ -43,7 +43,7 @@ internal class Client private constructor(
    */
   suspend fun run(): Int {
     var successfulTasks = 0
-    httpClient.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = port, path = "/ws/${user.userId}") {
+    httpClient.webSocket(method = HttpMethod.Get, host = "127.0.0.1", port = port, path = "/ws/${user.id}") {
       prologueTasks.forEach { it.run(this, user) }
       tasksToRun.forEach { it.setup(this, user) }
 
