@@ -122,14 +122,8 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
     if (newName.length > MAX_USERNAME_LENGTH)
       return sendTo(userId, "server::rename::error", "new name is too long: 50 characters limit")
 
-    // Re-sets the member name.
     val user = users[userId] ?: return
-    val oldName = user.name
-    synchronized(user) {
-      // if name was updated before we got the lock
-      if (user.name != oldName) return
-      user.name = newName
-    }
+    val oldName = user.rename(newName) ?: return
 
     sendTo(userId, "server::rename", "You have been renamed from $oldName to $newName")
   }
