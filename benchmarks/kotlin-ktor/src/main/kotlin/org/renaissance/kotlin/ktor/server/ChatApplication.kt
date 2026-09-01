@@ -79,11 +79,6 @@ class ChatApplication(initialChatCount: Int, initialSeed: Long) {
         server.joinChat(deserializedCommand.chatId, userId)
       }
 
-      is CreateChatCommand -> {
-        val createdChatId = server.createChat(userId)
-        sendSerializedCommandReplyNative(CreateChatCommandReply(createdChatId))
-      }
-
       is CreateDirectMessageChatCommand -> {
         val createdChat = server.createDirectMessageChat(
           userId,

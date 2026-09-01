@@ -1,6 +1,5 @@
 package org.renaissance.kotlin.ktor.server
 
-import io.ktor.util.generateNonce
 import io.ktor.websocket.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.ClosedSendChannelException
@@ -216,14 +215,6 @@ class ChatServer(initialChatCount: Int, initialSeed: Long) {
         // not our cancellation; nothing to do here
       }
     }
-  }
-
-  fun createChat(creatorUserId: String): String {
-    val chat = Chat(generateNonce())
-    chats[chat.id] = chat
-
-    chat.users.add(users[creatorUserId]!!)
-    return chat.id
   }
 
   fun createDirectMessageChat(creatorUserId: String, inviteeUserId: String): String {

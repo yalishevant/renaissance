@@ -9,10 +9,8 @@ import org.renaissance.kotlin.ktor.common.command.*
 internal val serializationFormat = Json {
   serializersModule = SerializersModule {
     polymorphic(Command::class) {
-      subclass(CreateChatCommand::class)
       subclass(CreateDirectMessageChatCommand::class)
       subclass(JoinChatCommand::class)
-      subclass(AddUserToChatCommand::class)
       subclass(RenameUserCommand::class)
     }
     polymorphic(CommandReply::class) {
